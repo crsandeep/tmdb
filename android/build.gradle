@@ -1,0 +1,62 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext {
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 35
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.24"
+    }
+    repositories {
+        // Try alternative repositories
+        maven { url 'https://repo1.maven.org/maven2' }
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.7.2")
+        classpath("com.google.gms:google-services:4.4.2")
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        // Try alternative repositories
+        maven { url 'https://repo1.maven.org/maven2' }
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+}
+
+// Configure Gradle to ignore SSL certificate validation (temporary workaround)
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.fork = true
+        options.forkOptions.jvmArgs += ['-Djavax.net.ssl.trustStore=NONE', '-Djavax.net.ssl.trustStoreType=Windows-ROOT']
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
