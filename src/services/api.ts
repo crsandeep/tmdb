@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Movie, TVShow, ApiResponse, ContentDetails, Genre, StreamingProvider, ContentType, RuntimeRange, Certification } from '../types';
+import type { Movie, TVShow, ApiResponse, ContentDetails, Genre, StreamingProvider, ContentType, RuntimeRange, Certification, Person } from '../types';
 
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -41,7 +41,7 @@ export const tmdbApi = {
   getMovies: async (
     languages: string[],
     page = 1,
-    sortBy: 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' = 'popularity.desc',
+    sortBy: 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' = 'primary_release_date.desc',
     year?: number,
     yearRange?: [number, number],
     streamingProviders?: number[],
@@ -132,7 +132,7 @@ export const tmdbApi = {
   getTVShows: async (
     languages: string[],
     page = 1,
-    sortBy: 'popularity.desc' | 'vote_average.desc' | 'first_air_date.desc' = 'popularity.desc',
+    sortBy: 'popularity.desc' | 'vote_average.desc' | 'first_air_date.desc' = 'first_air_date.desc',
     year?: number,
     yearRange?: [number, number],
     streamingProviders?: number[],
@@ -224,7 +224,7 @@ export const tmdbApi = {
     const endpoint = type === 'movie' ? `/movie/${id}` : `/tv/${id}`;
     const response = await api.get<ContentDetails>(endpoint, {
       params: {
-        append_to_response: 'videos,watch/providers',
+        append_to_response: 'videos,watch/providers,credits,external_ids',
       },
     });
 
@@ -306,6 +306,119 @@ export const tmdbApi = {
     setCache(cacheKey, indianCerts);
     return indianCerts;
   },
+
+  // Search for people (actors, directors, etc.)
+  searchPeople: async (query: string, page = 1): Promise<ApiResponse<Person>> => {
+    const cacheKey = `search-people-${query}-${page}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const response = await api.get<ApiResponse<Person>>('/search/person', {
+      params: {
+        query,
+        page,
+      },
+    });
+
+    setCache(cacheKey, response.data);
+    return response.data;
+  },
+
+  // Get movies by person (actor or crew member)
+  getMoviesByPerson: async (
+    personId: number,
+    page = 1,
+    sortBy: 'popularity.desc' | 'vote_average.desc' | 'primary_release_date.desc' = 'primary_release_date.desc',
+    streamingProviders?: number[],
+    genres?: number[],
+    year?: number,
+    yearRange?: [number, number]
+  ): Promise<ApiResponse<Movie>> => {
+    const cacheKey = `movies-by-person-${personId}-${page}-${sortBy}-${streamingProviders?.join(',') || ''}-${genres?.join(',') || ''}-${year || ''}-${yearRange?.join(',') || ''}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const params: any = {
+      with_people: personId,
+      page,
+      sort_by: sortBy,
+      'vote_count.gte': 5,
+    };
+
+    // Add streaming providers filter
+    if (streamingProviders && streamingProviders.length > 0) {
+      params.with_watch_providers = streamingProviders.join('|');
+      params.watch_region = 'IN'; // India region
+    }
+
+    // Add genre filter
+    if (genres && genres.length > 0) {
+      params.with_genres = genres.join(',');
+    }
+
+    // Add year filter
+    if (year) {
+      params.primary_release_year = year;
+    } else if (yearRange) {
+      params['primary_release_date.gte'] = `${yearRange[0]}-01-01`;
+      params['primary_release_date.lte'] = `${yearRange[1]}-12-31`;
+    }
+
+    const response = await api.get<ApiResponse<Movie>>('/discover/movie', {
+      params,
+    });
+
+    setCache(cacheKey, response.data);
+    return response.data;
+  },
+
+  // Get TV shows by person
+  getTVShowsByPerson: async (
+    personId: number,
+    page = 1,
+    sortBy: 'popularity.desc' | 'vote_average.desc' | 'first_air_date.desc' = 'first_air_date.desc',
+    streamingProviders?: number[],
+    genres?: number[],
+    year?: number,
+    yearRange?: [number, number]
+  ): Promise<ApiResponse<TVShow>> => {
+    const cacheKey = `tv-by-person-${personId}-${page}-${sortBy}-${streamingProviders?.join(',') || ''}-${genres?.join(',') || ''}-${year || ''}-${yearRange?.join(',') || ''}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const params: any = {
+      with_people: personId,
+      page,
+      sort_by: sortBy,
+      'vote_count.gte': 5,
+    };
+
+    // Add streaming providers filter
+    if (streamingProviders && streamingProviders.length > 0) {
+      params.with_watch_providers = streamingProviders.join('|');
+      params.watch_region = 'IN'; // India region
+    }
+
+    // Add genre filter
+    if (genres && genres.length > 0) {
+      params.with_genres = genres.join(',');
+    }
+
+    // Add year filter
+    if (year) {
+      params.first_air_date_year = year;
+    } else if (yearRange) {
+      params['first_air_date.gte'] = `${yearRange[0]}-01-01`;
+      params['first_air_date.lte'] = `${yearRange[1]}-12-31`;
+    }
+
+    const response = await api.get<ApiResponse<TVShow>>('/discover/tv', {
+      params,
+    });
+
+    setCache(cacheKey, response.data);
+    return response.data;
+  },
 };
 
 // Image URL helpers
@@ -320,4 +433,8 @@ export const getYouTubeUrl = (key: string) => {
 
 export const getYouTubeThumbnail = (key: string) => {
   return `https://img.youtube.com/vi/${key}/hqdefault.jpg`;
+};
+
+export const getIMDbUrl = (imdbId: string) => {
+  return `https://www.imdb.com/title/${imdbId}`;
 }; 

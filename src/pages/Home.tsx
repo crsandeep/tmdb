@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Layout, 
   Row, 
@@ -25,7 +26,7 @@ import {
   FilterOutlined
 } from '@ant-design/icons';
 import { ContentCard } from '../components/ContentCard';
-import { ContentModal } from '../components/ContentModal';
+import { PersonSearch } from '../components/PersonSearch';
 import { useContent } from '../hooks/useContent';
 import type { Movie, TVShow, ContentType, ViewType, SortBy, Genre } from '../types';
 import { tmdbApi } from '../services/api';
@@ -49,22 +50,38 @@ const runtimeOptions = [
 ];
 
 export const Home: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'browse' | 'upcoming'>('browse');
   const [contentType, setContentType] = useState<ContentType>('movie');
   const [viewType, setViewType] = useState<ViewType>('grid');
-  const [sortBy, setSortBy] = useState<SortBy>('popularity');
+  const [sortBy, setSortBy] = useState<SortBy>('year');
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(['all']);
   const [selectedProviders, setSelectedProviders] = useState<number[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+  const [selectedPerson, setSelectedPerson] = useState<{ id: number; name: string } | undefined>(undefined);
   const [runtime, setRuntime] = useState<string | null>(null);
   const [yearRange, setYearRange] = useState<[number, number]>([1920, new Date().getFullYear()]);
   const [searchQuery, setSearchQuery] = useState('');
   const [genres, setGenres] = useState<Genre[]>([]);
-  const [selectedContent, setSelectedContent] = useState<(Movie | TVShow) | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const loadingRef = useRef(false);
+
+  // Check for person filter in URL params on load
+  useEffect(() => {
+    const personId = searchParams.get('person');
+    const personName = searchParams.get('personName');
+    
+    if (personId && personName) {
+      setSelectedPerson({ 
+        id: parseInt(personId), 
+        name: decodeURIComponent(personName) 
+      });
+      // Clear URL params after setting the person
+      setSearchParams(new URLSearchParams());
+    }
+  }, [searchParams, setSearchParams]);
 
   // Detect mobile/desktop
   useEffect(() => {
@@ -81,7 +98,8 @@ export const Home: React.FC = () => {
     selectedProviders.length > 0,
     selectedGenres.length > 0,
     yearRange[0] !== 1920 || yearRange[1] !== new Date().getFullYear(),
-    runtime !== null
+    runtime !== null,
+    selectedPerson !== undefined
   ].filter(Boolean).length;
 
   const { content, loading, error, page, totalPages, loadMore } = useContent({
@@ -92,7 +110,8 @@ export const Home: React.FC = () => {
     genres: selectedGenres,
     yearRange,
     runtime: runtime as any,
-    upcoming: activeTab === 'upcoming'
+    upcoming: activeTab === 'upcoming',
+    personId: selectedPerson?.id
   });
 
   useEffect(() => {
@@ -186,6 +205,7 @@ export const Home: React.FC = () => {
           onChange={handleLanguageChange}
           options={allLanguageOptions}
           maxTagCount={isMobile ? 1 : 3}
+          showSearch={false}
         />
       </div>
 
@@ -197,6 +217,7 @@ export const Home: React.FC = () => {
           value={sortBy}
           onChange={setSortBy}
           options={sortOptions}
+          showSearch={false}
         />
       </div>
 
@@ -211,6 +232,7 @@ export const Home: React.FC = () => {
           onChange={setSelectedProviders}
           options={streamingOptions}
           maxTagCount={isMobile ? 1 : 3}
+          showSearch={false}
         />
       </div>
 
@@ -225,6 +247,18 @@ export const Home: React.FC = () => {
           onChange={setSelectedGenres}
           maxTagCount={isMobile ? 1 : 3}
           options={genres.map(g => ({ label: g.name, value: g.id }))}
+          showSearch={false}
+        />
+      </div>
+
+      {/* Actor/Director Filter */}
+      <div style={{ marginBottom: 16 }}>
+        <Text strong style={{ display: 'block', marginBottom: 8 }}>Actor/Director</Text>
+        <PersonSearch
+          value={selectedPerson}
+          onChange={setSelectedPerson}
+          style={{ width: '100%' }}
+          placeholder="Search actor or director..."
         />
       </div>
 
@@ -252,6 +286,7 @@ export const Home: React.FC = () => {
             onChange={setRuntime}
             options={runtimeOptions}
             placeholder="All Durations"
+            showSearch={false}
           />
         </div>
       )}
@@ -261,13 +296,16 @@ export const Home: React.FC = () => {
   return (
     <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
       {/* Compact Header for Mobile */}
-      <Header style={{ 
-        background: '#001529', 
-        padding: isMobile ? '0 16px' : '0 50px',
-        height: isMobile ? 56 : 64,
-        display: 'flex',
-        alignItems: 'center'
-      }}>
+      <Header 
+        style={{ 
+          background: '#001529', 
+          padding: isMobile ? '0 16px' : '0 50px',
+          paddingTop: isMobile ? 12 : 0,
+          height: isMobile ? 68 : 64,
+          display: 'flex',
+          alignItems: 'center'
+        }}
+      >
         <Title level={isMobile ? 4 : 3} style={{ color: 'white', margin: 0 }}>
           {isMobile ? '🎬 Indian Cinema' : '🎬 Indian Cinema Hub'}
         </Title>
@@ -400,6 +438,7 @@ export const Home: React.FC = () => {
                     onChange={handleLanguageChange}
                     options={allLanguageOptions}
                     maxTagCount={2}
+                    showSearch={!isMobile}
                   />
                 </Col>
 
@@ -410,6 +449,7 @@ export const Home: React.FC = () => {
                     value={sortBy}
                     onChange={setSortBy}
                     options={sortOptions}
+                    showSearch={false}
                   />
                 </Col>
 
@@ -423,6 +463,7 @@ export const Home: React.FC = () => {
                     onChange={setSelectedProviders}
                     options={streamingOptions}
                     maxTagCount={2}
+                    showSearch={!isMobile}
                   />
                 </Col>
 
@@ -448,7 +489,7 @@ export const Home: React.FC = () => {
                   border: '1px solid #f0f0f0' 
                 }}>
                   <Row gutter={16}>
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={6}>
                       <Text strong style={{ display: 'block', marginBottom: 8 }}>Genres</Text>
                       <Select
                         mode="multiple"
@@ -458,10 +499,21 @@ export const Home: React.FC = () => {
                         onChange={setSelectedGenres}
                         maxTagCount={3}
                         options={genres.map(g => ({ label: g.name, value: g.id }))}
+                        showSearch={!isMobile}
+                      />
+                    </Col>
+
+                    <Col xs={24} md={6}>
+                      <Text strong style={{ display: 'block', marginBottom: 8 }}>Actor/Director</Text>
+                      <PersonSearch
+                        value={selectedPerson}
+                        onChange={setSelectedPerson}
+                        style={{ width: '100%' }}
+                        placeholder="Search actor or director..."
                       />
                     </Col>
                     
-                    <Col xs={24} md={8}>
+                    <Col xs={24} md={6}>
                       <Text strong style={{ display: 'block', marginBottom: 8 }}>
                         Year Range: {yearRange[0]} - {yearRange[1]}
                       </Text>
@@ -475,7 +527,7 @@ export const Home: React.FC = () => {
                     </Col>
                     
                     {contentType === 'movie' && (
-                      <Col xs={24} md={8}>
+                      <Col xs={24} md={6}>
                         <Text strong style={{ display: 'block', marginBottom: 8 }}>Runtime</Text>
                         <Select
                           style={{ width: '100%' }}
@@ -483,6 +535,7 @@ export const Home: React.FC = () => {
                           onChange={setRuntime}
                           options={runtimeOptions}
                           placeholder="All Durations"
+                          showSearch={false}
                         />
                       </Col>
                     )}
@@ -507,6 +560,7 @@ export const Home: React.FC = () => {
                   setSelectedLanguages(['all']);
                   setSelectedProviders([]);
                   setSelectedGenres([]);
+                  setSelectedPerson(undefined);
                   setYearRange([1920, new Date().getFullYear()]);
                   setRuntime(null);
                 }}
@@ -520,7 +574,7 @@ export const Home: React.FC = () => {
 
           {/* Active Filter Tags */}
           {!isMobile && (selectedLanguages.length > 0 && !selectedLanguages.includes('all')) || 
-           selectedProviders.length > 0 || selectedGenres.length > 0 ? (
+           selectedProviders.length > 0 || selectedGenres.length > 0 || selectedPerson ? (
             <div style={{ marginBottom: 16 }}>
               <Space wrap>
                 <Text type="secondary">Active filters:</Text>
@@ -562,6 +616,14 @@ export const Home: React.FC = () => {
                     </Tag>
                   );
                 })}
+                {selectedPerson && (
+                  <Tag 
+                    closable 
+                    onClose={() => setSelectedPerson(undefined)}
+                  >
+                    {selectedPerson.name}
+                  </Tag>
+                )}
               </Space>
             </div>
           ) : null}
@@ -630,8 +692,8 @@ export const Home: React.FC = () => {
                   >
                     <ContentCard
                       content={item}
+                      contentType={contentType}
                       viewType={isMobile ? 'grid' : viewType}
-                      onClick={() => setSelectedContent(item)}
                       isUpcoming={activeTab === 'upcoming'}
                       genres={genres}
                     />
@@ -649,16 +711,6 @@ export const Home: React.FC = () => {
           )}
         </div>
       </Content>
-
-      {/* Content Modal */}
-      {selectedContent && (
-        <ContentModal
-          content={selectedContent}
-          type={contentType}
-          genres={genres}
-          onClose={() => setSelectedContent(null)}
-        />
-      )}
     </Layout>
   );
 }; 

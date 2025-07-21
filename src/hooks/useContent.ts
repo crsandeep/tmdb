@@ -13,6 +13,7 @@ interface UseContentParams {
   runtime?: RuntimeRange;
   certification?: string;
   upcoming?: boolean;
+  personId?: number;
 }
 
 interface UseContentReturn {
@@ -36,6 +37,7 @@ export const useContent = ({
   runtime,
   certification,
   upcoming,
+  personId,
 }: UseContentParams): UseContentReturn => {
   const [content, setContent] = useState<(Movie | TVShow)[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,30 @@ export const useContent = ({
 
       let response: ApiResponse<Movie | TVShow>;
       
-      if (upcoming && type === 'movie') {
+      // If filtering by person, use person-specific API calls
+      if (personId) {
+        if (type === 'movie') {
+          response = await tmdbApi.getMoviesByPerson(
+            personId,
+            pageNum,
+            sortByMap[sortBy] as any,
+            streamingProviders,
+            genres,
+            year,
+            yearRange
+          );
+        } else {
+          response = await tmdbApi.getTVShowsByPerson(
+            personId,
+            pageNum,
+            sortByMap[sortBy] as any,
+            streamingProviders,
+            genres,
+            year,
+            yearRange
+          );
+        }
+      } else if (upcoming && type === 'movie') {
         response = await tmdbApi.getUpcomingMovies(languages, pageNum);
       } else if (type === 'movie') {
         response = await tmdbApi.getMovies(
@@ -89,7 +114,7 @@ export const useContent = ({
     } finally {
       setLoading(false);
     }
-  }, [type, languages, sortBy, year, yearRange, streamingProviders, genres, runtime, certification, upcoming]);
+  }, [type, languages, sortBy, year, yearRange, streamingProviders, genres, runtime, certification, upcoming, personId]);
 
   useEffect(() => {
     setPage(1);

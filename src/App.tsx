@@ -1,5 +1,7 @@
 import { ConfigProvider, theme } from 'antd';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Home } from './pages/Home';
+import { ContentDetail } from './pages/ContentDetail';
 
 function App() {
   return (
@@ -13,7 +15,13 @@ function App() {
         },
       }}
     >
-      <Home />
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/movie/:id" element={<ContentDetail type="movie" />} />
+          <Route path="/tv/:id" element={<ContentDetail type="tv" />} />
+        </Routes>
+      </Router>
     </ConfigProvider>
   );
 }

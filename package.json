@@ -13,8 +13,10 @@
   "dependencies": {
     "@ant-design/icons": "^6.0.0",
     "@capacitor/android": "^7.4.1",
+    "@capacitor/app": "^7.0.1",
     "@capacitor/cli": "^7.4.1",
-    "@capacitor/core": "^7.4.1",
+    "@capacitor/core": "^7.4.2",
+    "@capacitor/status-bar": "^7.0.1",
     "antd": "^5.26.3",
     "axios": "^1.10.0",
     "dayjs": "^1.11.13",

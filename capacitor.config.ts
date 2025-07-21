@@ -8,11 +8,7 @@ const config: CapacitorConfig = {
     androidScheme: 'https'
   },
   android: {
-    backgroundColor: '#001529',
-    buildOptions: {
-      minSdkVersion: 24,
-      targetSdkVersion: 34
-    }
+    backgroundColor: '#001529'
   }
 };
 

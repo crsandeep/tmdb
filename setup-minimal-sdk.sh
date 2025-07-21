@@ -20,11 +20,21 @@ fi
 
 # Check prerequisites
 if ! command -v java &> /dev/null; then
-    echo "❌ Java is not installed. Please install Java 17 from https://adoptium.net/"
+    echo "❌ Java is not installed. Please install Java 21 LTS:"
+    echo "   macOS: brew install openjdk@21"
+    echo "   Other: https://adoptium.net/"
     exit 1
 fi
 
 echo "✅ Java found: $(java -version 2>&1 | head -n 1)"
+
+# Check Java version compatibility
+JAVA_VERSION=$(java -version 2>&1 | head -n 1 | cut -d'"' -f2 | cut -d'.' -f1)
+if [ "$JAVA_VERSION" -gt 23 ]; then
+    echo "⚠️  Warning: Java $JAVA_VERSION detected. Gradle 8.11.1 supports up to Java 23."
+    echo "   Consider using Java 21 LTS for better compatibility:"
+    echo "   macOS: brew install openjdk@21 && export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/*/libexec/openjdk.jdk/Contents/Home"
+fi
 
 # Set up directories
 ANDROID_HOME="$HOME/Android/sdk"

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Tag, Space, Typography, Rate, Badge, Tooltip } from 'antd';
 import { CalendarOutlined, PlayCircleOutlined, StarFilled } from '@ant-design/icons';
-import type { Movie, TVShow, ViewType } from '../types';
+import type { Movie, TVShow, ViewType, ContentType } from '../types';
 import { getImageUrl } from '../services/api';
 import { INDIAN_LANGUAGES } from '../types';
+import { useThrottle } from '../hooks/useDebounce';
 
 const { Text, Title, Paragraph } = Typography;
 
 interface ContentCardProps {
   content: Movie | TVShow;
   viewType: ViewType;
-  onClick: () => void;
+  contentType: ContentType;
   isUpcoming?: boolean;
   genres?: { id: number; name: string }[];
 }
@@ -26,8 +28,18 @@ const getRatingColor = (rating: number) => {
   return '#ff4d4f'; // red
 };
 
-export const ContentCard: React.FC<ContentCardProps> = ({ content, viewType, onClick, isUpcoming, genres = [] }) => {
+export const ContentCard: React.FC<ContentCardProps> = React.memo(({ content, viewType, contentType, isUpcoming, genres = [] }) => {
   const [showOverlay, setShowOverlay] = useState(false);
+  const navigate = useNavigate();
+  
+  // Handle navigation to detail page
+  const handleClick = () => {
+    const path = contentType === 'movie' ? `/movie/${content.id}` : `/tv/${content.id}`;
+    navigate(path);
+  };
+  
+  // Throttle clicks to prevent rapid navigation
+  const throttledClick = useThrottle(handleClick, 500);
   
   const title = isMovie(content) ? content.title : content.name;
   const date = isMovie(content) ? content.release_date : content.first_air_date;
@@ -56,7 +68,7 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, viewType, onC
     return (
       <Card
         hoverable
-        onClick={onClick}
+        onClick={throttledClick}
         style={{ 
           marginBottom: 16,
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -154,14 +166,15 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, viewType, onC
     >
       <Card
         hoverable
-        onClick={onClick}
+        onClick={throttledClick}
         onMouseEnter={() => setShowOverlay(true)}
         onMouseLeave={() => setShowOverlay(false)}
         style={{
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           border: '1px solid #f0f0f0',
-          transition: 'all 0.3s ease',
-          overflow: 'hidden'
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          overflow: 'hidden',
+          willChange: 'transform'
         }}
         styles={{ body: { padding: 0 } }}
         cover={
@@ -198,8 +211,9 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, viewType, onC
               flexDirection: 'column',
               justifyContent: 'space-between',
               opacity: showOverlay ? 1 : 0,
-              transition: 'opacity 0.3s ease',
-              pointerEvents: showOverlay ? 'auto' : 'none'
+              transition: 'opacity 0.2s ease',
+              pointerEvents: showOverlay ? 'auto' : 'none',
+              willChange: 'opacity'
             }}>
               <div>
                 <Title level={5} style={{ color: 'white', marginBottom: 8 }}>{title}</Title>
@@ -279,4 +293,6 @@ export const ContentCard: React.FC<ContentCardProps> = ({ content, viewType, onC
       </Card>
     </Badge.Ribbon>
   );
-}; 
+});
+
+ContentCard.displayName = 'ContentCard'; 
